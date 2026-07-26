@@ -59,14 +59,20 @@ class ReportController extends Controller
         $productProfit = $sales->flatMap->items->groupBy(function ($item) {
             return $item->product?->name ?? 'Unknown';
         })->map(function ($items, $name) {
-            $soldQty = (int) $items->sum(function ($item) {
-                return (int) ($item->quantity ?? 0);
+            // FIXED: Cast to float to handle 0.5 kg etc.
+            $soldQty = (float) $items->sum(function ($item) {
+                return (float) ($item->quantity ?? 0); 
             });
             $salesValue = $items->sum(function ($item) {
-                return (float) ($item->price ?? 0) * (int) ($item->quantity ?? 0);
+                return (float) ($item->price ?? 0) * (float) ($item->quantity ?? 0);
             });
             $costValue = $items->sum(function ($item) {
-                return (float) ($item->product?->cost_price ?? 0) * (int) ($item->quantity ?? 0);
+                // Use the cost snapshotted on the item at time of sale, not today's
+                // live product cost — otherwise a later Purchase silently rewrites
+                // past profit numbers. Falls back to product cost for old rows
+                // recorded before this column was populated.
+                $cost = $item->cost_price ?? $item->product?->cost_price ?? 0;
+                return (float) $cost * (float) ($item->quantity ?? 0);
             });
 
             return [
@@ -80,7 +86,8 @@ class ReportController extends Controller
 
         $totalSales = $sales->sum('net_amount');
         $totalCostOfGoodsSold = $sales->flatMap->items->sum(function ($item) {
-            return ($item->product?->cost_price ?? 0) * $item->quantity;
+            $cost = $item->cost_price ?? $item->product?->cost_price ?? 0;
+            return (float) $cost * (float) $item->quantity;
         });
         $totalProfit = $totalSales - $totalCostOfGoodsSold;
         $totalPurchases = $purchases->sum('net_amount');
