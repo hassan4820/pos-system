@@ -12,6 +12,7 @@ class Product extends Model
     protected $casts = [
         'cost_price' => 'decimal:2',
         'retail_price' => 'decimal:2',
+        'stock_quantity' => 'decimal:3', // Added to handle fractional inventory
     ];
 
     // Define the relationship to product_units
@@ -24,6 +25,6 @@ class Product extends Model
     public function convertToBase($quantity, $unitId)
     {
         $unit = $this->units()->findOrFail($unitId);
-        return $quantity * $unit->conversion_factor;
+        return (float) $quantity * (float) $unit->conversion_factor; // Ensure float multiplication
     }
 }

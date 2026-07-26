@@ -34,6 +34,11 @@ Route::middleware('auth')->group(function () {
     Route::post('/checkout', [CheckoutController::class, 'store'])->name('checkout.store');
     Route::get('/products', [ProductController::class, 'index'])->name('products.index');
     Route::post('/products', [ProductController::class, 'store'])->name('products.store');
+
+    // ADD THESE TWO LINES:
+    Route::put('/products/{product}', [ProductController::class, 'update'])->name('products.update');
+    Route::delete('/products/{product}', [ProductController::class, 'destroy'])->name('products.destroy');
+
     Route::get('/purchase', [PurchaseController::class, 'index'])->name('purchase.index');
     Route::post('/purchase', [PurchaseController::class, 'store'])->name('purchase.store');
     Route::get('/reports', [ReportController::class, 'index'])->name('reports.index');
@@ -42,4 +47,4 @@ Route::middleware('auth')->group(function () {
     Route::post('/admin/users', [AdminUserController::class, 'store'])->name('admin.users.store');
 });
 
-require __DIR__.'/auth.php';
+require __DIR__ . '/auth.php';

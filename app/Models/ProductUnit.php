@@ -9,6 +9,10 @@ class ProductUnit extends Model
 {
     protected $fillable = ['product_id', 'unit_name', 'conversion_factor'];
 
+    protected $casts = [
+        'conversion_factor' => 'decimal:3',
+    ];
+
     public function product(): BelongsTo
     {
         return $this->belongsTo(Product::class);

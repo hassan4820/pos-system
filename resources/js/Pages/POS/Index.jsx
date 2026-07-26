@@ -1,7 +1,8 @@
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout';
 import { useToast } from '@/Components/ToastProvider';
 import { Head, router, usePage } from '@inertiajs/react';
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useMemo } from 'react';
+import AddToCartForm from '../../Components/AddToCartForm';
 
 export default function Index({ products }) {
     const { addToast } = useToast();
@@ -9,6 +10,7 @@ export default function Index({ products }) {
     const [cart, setCart] = useState([]);
     const [discount, setDiscount] = useState(0);
     const [searchTerm, setSearchTerm] = useState('');
+    const [debouncedSearchTerm, setDebouncedSearchTerm] = useState(''); // New state
 
     const formatCurrency = (amount) =>
         new Intl.NumberFormat('en-PK', {
@@ -16,29 +18,36 @@ export default function Index({ products }) {
             currency: 'PKR',
         }).format(amount);
 
-    const addToCart = (product, unit) => {
-        const existingItem = cart.find((item) => item.product_id === product.id && item.unit_id === unit.id);
-        if (existingItem) {
-            const nextCart = cart.map((item) =>
-                item.product_id === product.id && item.unit_id === unit.id
-                    ? { ...item, quantity: item.quantity + 1 }
-                    : item,
-            );
-            setCart(nextCart);
+    const addToCart = (product, unit, customQuantity = 1) => {
+        // Find the index of the item instead of just checking if it exists
+        const existingItemIndex = cart.findIndex(
+            (item) => item.product_id === product.id && item.unit_id === unit.id
+        );
+
+        if (existingItemIndex > -1) {
+            // Item exists: extract it, update the quantity, and push it to the top
+            const nextCart = [...cart];
+            const itemToUpdate = nextCart.splice(existingItemIndex, 1)[0]; // Removes item from old position
+            itemToUpdate.quantity += customQuantity; // Update quantity
+
+            setCart([itemToUpdate, ...nextCart]); // Place at the very beginning (index 0)
             return;
         }
 
+        // New item: place the new object first, then spread the existing cart array after it
+        const resolvedUnitId =
+            typeof unit.id === 'number' || /^\d+$/.test(String(unit.id)) ? Number(unit.id) : null;
+
         setCart([
-            ...cart,
             {
                 product_id: product.id,
                 name: product.name,
-                unit_id: unit.id,
+                unit_id: resolvedUnitId,
                 unit_name: unit.unit_name,
                 price: product.retail_price,
-                conversion_factor: unit.conversion_factor,
-                quantity: 1,
+                quantity: customQuantity,
             },
+            ...cart,
         ]);
     };
 
@@ -69,21 +78,26 @@ export default function Index({ products }) {
         setDiscount(0);
     };
 
+    // Debounce the search input to prevent UI freezing
     useEffect(() => {
-        if (errors && Object.keys(errors).length > 0) {
-            const errorMessages = Object.values(errors).filter(Boolean);
-            if (errorMessages.length > 0) {
-                addToast(errorMessages[0], 'error');
-            }
-        }
-    }, [errors, addToast]);
+        const timer = setTimeout(() => {
+            setDebouncedSearchTerm(searchTerm);
+        }, 300);
 
-    const filteredProducts = products.filter((product) => {
-        const query = searchTerm.trim().toLowerCase();
-        if (!query) return true;
+        return () => clearTimeout(timer);
+    }, [searchTerm]);
 
-        return `${product.name} ${product.sku}`.toLowerCase().includes(query);
-    });
+    const filteredProducts = useMemo(() => {
+        const query = debouncedSearchTerm.trim().toLowerCase();
+
+        // If no search, only render the first 50 products to prevent DOM overload
+        if (!query) return products.slice(0, 50);
+
+        // Filter and limit results
+        return products
+            .filter((product) => `${product.name} ${product.sku}`.toLowerCase().includes(query))
+            .slice(0, 50);
+    }, [debouncedSearchTerm, products]);
 
     const subtotal = cart.reduce((sum, item) => sum + item.price * item.quantity, 0);
     const totalAmount = Math.max(0, subtotal - discount);
@@ -97,7 +111,12 @@ export default function Index({ products }) {
         router.post(
             '/checkout',
             {
-                items: cart,
+                items: cart.map(({ product_id, quantity, price, unit_id }) => ({
+                    product_id,
+                    quantity,
+                    price,
+                    unit_id,
+                })),
                 total: totalAmount,
                 discount,
             },
@@ -148,15 +167,14 @@ export default function Index({ products }) {
                                             </div>
                                             <span className="text-sm font-semibold text-green-700">{formatCurrency(product.retail_price)}</span>
                                         </div>
-                                        <div className="space-y-2">
+                                        <div className="space-y-2 mt-3">
                                             {units.map((unit) => (
-                                                <button
+                                                <AddToCartForm
                                                     key={unit.id}
-                                                    onClick={() => addToCart(product, unit)}
-                                                    className="w-full rounded bg-blue-600 px-3 py-2 text-white hover:bg-blue-700"
-                                                >
-                                                    Add {unit.unit_name}
-                                                </button>
+                                                    product={product}
+                                                    unit={unit}
+                                                    onAddToCart={addToCart}
+                                                />
                                             ))}
                                         </div>
                                     </div>
