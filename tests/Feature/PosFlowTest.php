@@ -109,6 +109,6 @@ class PosFlowTest extends TestCase
         $response->assertOk();
         $response->assertSee('Profit');
         $response->assertSee('"productProfit"');
-        $response->assertSee('"monthlyProfit"');
+        $response->assertSee('"monthlySales"');
     }
 }

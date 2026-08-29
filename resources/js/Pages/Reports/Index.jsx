@@ -9,7 +9,7 @@ export default function Index({
     totalPurchases,
     saleCount,
     productProfit,
-    monthlyProfit,
+    monthlySales,
     weeklyProfit,
     dailyProfit,
 }) {
@@ -20,10 +20,10 @@ export default function Index({
         }).format(amount);
 
     const safeProductProfit = Array.isArray(productProfit) ? productProfit : [];
-    const safeMonthlyProfit = Array.isArray(monthlyProfit) ? monthlyProfit : [];
+    const safeMonthlySales = Array.isArray(monthlySales) ? monthlySales : [];
     const safeWeeklyProfit = Array.isArray(weeklyProfit) ? weeklyProfit : [];
     const safeDailyProfit = Array.isArray(dailyProfit) ? dailyProfit : [];
-    const maxBarHeight = Math.max(...[...safeMonthlyProfit, ...safeWeeklyProfit, ...safeDailyProfit].map((entry) => entry.amount || 0), 1);
+    const maxBarHeight = Math.max(...[...safeMonthlySales, ...safeWeeklyProfit, ...safeDailyProfit].map((entry) => entry.amount || 0), 1);
 
     return (
         <AuthenticatedLayout header={<h2 className="text-xl font-semibold">Reports & Profit</h2>}>
@@ -74,9 +74,9 @@ export default function Index({
                         </div>
 
                         <div className="rounded-lg bg-white p-6 shadow-sm">
-                            <h3 className="mb-4 text-lg font-semibold">Monthly Profit</h3>
+                            <h3 className="mb-4 text-lg font-semibold">Monthly Sales</h3>
                             <div className="space-y-3">
-                                {safeMonthlyProfit.map((entry) => (
+                                {safeMonthlySales.map((entry) => (
                                     <div key={entry.month} className="rounded border border-gray-200 p-3">
                                         <div className="flex items-center justify-between text-sm">
                                             <span className="font-medium">{entry.month}</span>

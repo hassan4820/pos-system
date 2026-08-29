@@ -31,11 +31,10 @@ export default function AddToCartForm({ product, unit, onAddToCart }) {
         if (!Number.isFinite(qty) || qty < 0.01) {
             return;
         }
-        onAddToCart(product, unit, qty);
-        
-        // Reset inputs back to default after adding
-        setQuantity(1);
-        setCalculatedPrice(product.retail_price);
+        if (onAddToCart(product, unit, qty)) {
+            setQuantity(1);
+            setCalculatedPrice(product.retail_price);
+        }
     };
 
     return (

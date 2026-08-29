@@ -10,6 +10,7 @@ export default function Index({ products }) {
     const [cart, setCart] = useState([]);
     const [discount, setDiscount] = useState(0);
     const [searchTerm, setSearchTerm] = useState('');
+    const [barcode, setBarcode] = useState('');
     const [debouncedSearchTerm, setDebouncedSearchTerm] = useState(''); // New state
 
     const formatCurrency = (amount) =>
@@ -18,7 +19,24 @@ export default function Index({ products }) {
             currency: 'PKR',
         }).format(amount);
 
+    const baseQuantityInCart = (productId, excludingIndex = null) => cart.reduce((total, item, index) => {
+        if (item.product_id === productId && index !== excludingIndex) {
+            return total + (Number(item.quantity) * Number(item.conversion_factor || 1));
+        }
+
+        return total;
+    }, 0);
+
     const addToCart = (product, unit, customQuantity = 1) => {
+        const conversionFactor = Number(unit.conversion_factor || 1);
+        const requestedBaseQuantity = Number(customQuantity) * conversionFactor;
+        const cartBaseQuantity = baseQuantityInCart(product.id);
+
+        if (cartBaseQuantity + requestedBaseQuantity > Number(product.stock_quantity)) {
+            addToast(`${product.name} is out of stock or does not have enough stock available.`, 'error');
+            return false;
+        }
+
         // Find the index of the item instead of just checking if it exists
         const existingItemIndex = cart.findIndex(
             (item) => item.product_id === product.id && item.unit_id === unit.id
@@ -26,12 +44,13 @@ export default function Index({ products }) {
 
         if (existingItemIndex > -1) {
             // Item exists: extract it, update the quantity, and push it to the top
-            const nextCart = [...cart];
-            const itemToUpdate = nextCart.splice(existingItemIndex, 1)[0]; // Removes item from old position
-            itemToUpdate.quantity += customQuantity; // Update quantity
-
-            setCart([itemToUpdate, ...nextCart]); // Place at the very beginning (index 0)
-            return;
+            const nextCart = cart.map((item, index) => index === existingItemIndex
+                ? { ...item, quantity: Number(item.quantity) + Number(customQuantity) }
+                : item,
+            );
+            const [itemToUpdate] = nextCart.splice(existingItemIndex, 1);
+            setCart([itemToUpdate, ...nextCart]);
+            return true;
         }
 
         // New item: place the new object first, then spread the existing cart array after it
@@ -44,11 +63,13 @@ export default function Index({ products }) {
                 name: product.name,
                 unit_id: resolvedUnitId,
                 unit_name: unit.unit_name,
+                conversion_factor: conversionFactor,
                 price: product.retail_price,
                 quantity: customQuantity,
             },
             ...cart,
         ]);
+        return true;
     };
 
     const removeFromCart = (indexToRemove) => {
@@ -56,10 +77,20 @@ export default function Index({ products }) {
     };
 
     const setQuantity = (index, value) => {
-        const nextCart = [...cart];
         const parsedValue = Number(value);
-        nextCart[index].quantity = Number.isFinite(parsedValue) && parsedValue >= 1 ? parsedValue : 1;
-        setCart(nextCart);
+        const nextQuantity = Number.isFinite(parsedValue) && parsedValue >= 0.01 ? parsedValue : 0.01;
+        const item = cart[index];
+        const product = products.find((candidate) => candidate.id === item.product_id);
+
+        if (product && baseQuantityInCart(item.product_id, index) + (nextQuantity * Number(item.conversion_factor || 1)) > Number(product.stock_quantity)) {
+            addToast(`${product.name} does not have enough stock available.`, 'error');
+            return;
+        }
+
+        setCart(cart.map((cartItem, cartIndex) => cartIndex === index
+            ? { ...cartItem, quantity: nextQuantity }
+            : cartItem,
+        ));
     };
 
     const setItemPrice = (index, value) => {
@@ -131,6 +162,24 @@ export default function Index({ products }) {
         );
     };
 
+    const handleBarcodeSubmit = (event) => {
+        event.preventDefault();
+        const scannedCode = barcode.trim().toLowerCase();
+        const product = products.find((candidate) => candidate.sku?.toLowerCase() === scannedCode);
+
+        if (!product) {
+            addToast('No product matches this barcode/SKU.', 'error');
+            return;
+        }
+
+        const unit = product.units?.[0] || {
+            id: `default-${product.id}`,
+            unit_name: product.unit || product.custom_unit || 'Unit',
+            conversion_factor: 1,
+        };
+        if (addToCart(product, unit)) setBarcode('');
+    };
+
     return (
         <AuthenticatedLayout header={<h2 className="text-xl font-semibold">POS Terminal</h2>}>
             <Head title="POS" />
@@ -147,6 +196,18 @@ export default function Index({ products }) {
                                 className="w-full rounded-md border-gray-300"
                             />
                         </div>
+                        <form onSubmit={handleBarcodeSubmit} className="mb-4 rounded-lg bg-white p-4 shadow-sm">
+                            <label className="mb-2 block text-sm font-medium text-gray-700">Barcode scanner / SKU</label>
+                            <div className="flex gap-2">
+                                <input
+                                    value={barcode}
+                                    onChange={(event) => setBarcode(event.target.value)}
+                                    placeholder="Scan a barcode, then press Enter"
+                                    className="w-full rounded-md border-gray-300"
+                                />
+                                <button type="submit" className="rounded bg-blue-600 px-4 text-sm font-semibold text-white hover:bg-blue-700">Add</button>
+                            </div>
+                        </form>
                         <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
                             {filteredProducts.map((product) => {
                                 const units = product.units?.length ? product.units : [
@@ -158,12 +219,14 @@ export default function Index({ products }) {
                                 ];
 
                                 return (
-                                    <div key={product.id} className="rounded-lg bg-white p-4 shadow-sm">
+                                    <div key={product.id} className={`rounded-lg bg-white p-4 shadow-sm ${Number(product.stock_quantity) <= 0 ? 'ring-1 ring-red-300' : ''}`}>
                                         <div className="mb-3 flex items-start justify-between">
                                             <div>
                                                 <h2 className="font-semibold">{product.name}</h2>
                                                 <p className="text-sm text-gray-600">SKU: {product.sku}</p>
-                                                <p className="text-sm text-gray-600">Stock: {product.stock_quantity}</p>
+                                                <p className={`text-sm ${Number(product.stock_quantity) <= 0 ? 'font-semibold text-red-700' : 'text-gray-600'}`}>
+                                                    {Number(product.stock_quantity) <= 0 ? 'Out of stock' : `Stock: ${product.stock_quantity}`}
+                                                </p>
                                             </div>
                                             <span className="text-sm font-semibold text-green-700">{formatCurrency(product.retail_price)}</span>
                                         </div>

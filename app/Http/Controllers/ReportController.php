@@ -100,7 +100,7 @@ class ReportController extends Controller
             'totalPurchases' => $totalPurchases,
             'saleCount' => $sales->count(),
             'productProfit' => $productProfit,
-            'monthlyProfit' => $monthlySales->map(function ($amount, $month) {
+            'monthlySales' => $monthlySales->map(function ($amount, $month) {
                 return ['month' => $month, 'amount' => (float) $amount];
             })->values(),
             'weeklyProfit' => $weeklySales->map(function ($amount, $day) {
