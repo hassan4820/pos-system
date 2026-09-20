@@ -31,15 +31,20 @@ export default function Index({ products }) {
         const conversionFactor = Number(unit.conversion_factor || 1);
         const requestedBaseQuantity = Number(customQuantity) * conversionFactor;
         const cartBaseQuantity = baseQuantityInCart(product.id);
+        // Keep the unit identifier in the same format for both lookup and storage.
+        // API responses can serialize IDs as strings, while cart items use numbers.
+        const resolvedUnitId =
+            typeof unit.id === 'number' || /^\d+$/.test(String(unit.id)) ? Number(unit.id) : null;
 
         if (cartBaseQuantity + requestedBaseQuantity > Number(product.stock_quantity)) {
             addToast(`${product.name} is out of stock or does not have enough stock available.`, 'error');
             return false;
         }
 
-        // Find the index of the item instead of just checking if it exists
+        // Find the existing product/unit line. Comparing a normalized ID prevents
+        // duplicate cart keys, which makes React render the wrong row contents.
         const existingItemIndex = cart.findIndex(
-            (item) => item.product_id === product.id && item.unit_id === unit.id
+            (item) => item.product_id === product.id && item.unit_id === resolvedUnitId
         );
 
         if (existingItemIndex > -1) {
@@ -54,9 +59,6 @@ export default function Index({ products }) {
         }
 
         // New item: place the new object first, then spread the existing cart array after it
-        const resolvedUnitId =
-            typeof unit.id === 'number' || /^\d+$/.test(String(unit.id)) ? Number(unit.id) : null;
-
         setCart([
             {
                 product_id: product.id,

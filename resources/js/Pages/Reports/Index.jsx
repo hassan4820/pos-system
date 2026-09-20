@@ -1,5 +1,5 @@
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout';
-import { Head } from '@inertiajs/react';
+import { Head, Link } from '@inertiajs/react';
 
 export default function Index({
     sales,
@@ -119,7 +119,7 @@ export default function Index({
                     </div>
 
                     <div className="rounded-lg bg-white p-6 shadow-sm">
-                        <h3 className="mb-4 text-lg font-semibold">Recent Sales</h3>
+                        <h3 className="mb-4 text-lg font-semibold">Sales History</h3>
                         <div className="overflow-x-auto">
                             <table className="min-w-full divide-y divide-gray-200">
                                 <thead>
@@ -128,6 +128,7 @@ export default function Index({
                                         <th className="px-4 py-2 text-left">Products</th>
                                         <th className="px-4 py-2 text-left">Items</th>
                                         <th className="px-4 py-2 text-left">Net Amount</th>
+                                        <th className="px-4 py-2 text-right">Invoice</th>
                                     </tr>
                                 </thead>
                                 <tbody>
@@ -145,6 +146,14 @@ export default function Index({
                                             </td>
                                             <td className="px-4 py-2">{sale.items.length}</td>
                                             <td className="px-4 py-2">{formatCurrency(sale.net_amount)}</td>
+                                            <td className="px-4 py-2 text-right">
+                                                <Link
+                                                    href={route('invoice.show', sale.id)}
+                                                    className="inline-flex rounded bg-blue-600 px-3 py-1.5 text-sm font-medium text-white hover:bg-blue-700"
+                                                >
+                                                    View / Print
+                                                </Link>
+                                            </td>
                                         </tr>
                                     ))}
                                 </tbody>

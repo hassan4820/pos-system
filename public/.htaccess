@@ -4,6 +4,7 @@
     </IfModule>
 
     RewriteEngine On
+    RewriteBase /pos-system/
 
     # Handle Authorization Header
     RewriteCond %{HTTP:Authorization} .
