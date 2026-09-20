@@ -40,6 +40,8 @@ export default function Show({ order }) {
                 font-weight: 700 !important;
                 line-height: 1.4 !important;
                 direction: rtl;
+                max-height: none !important;
+                overflow: visible !important;
             }
             .no-print {
                 display: none !important;
@@ -62,8 +64,11 @@ export default function Show({ order }) {
         <AuthenticatedLayout header={<h2 className="text-xl font-semibold">Invoice</h2>}>
             <Head title="Invoice" />
             <style>{printStyles}</style>
-            <div className="py-12 print:py-0">
-                <div dir="rtl" className="print-area mx-auto max-w-2xl rounded-lg bg-white p-8 text-right shadow-sm print:max-w-none print:rounded-none print:shadow-none">
+            <div className="py-6 print:py-0">
+                <div
+                    dir="rtl"
+                    className="print-area mx-auto max-h-[calc(100vh-7rem)] max-w-2xl overflow-y-auto rounded-lg bg-white p-8 text-right shadow-sm print:max-h-none print:max-w-none print:overflow-visible print:rounded-none print:shadow-none"
+                >
                     <div className="mb-4 border-b border-gray-300 pb-3 print:border-black print:pb-2">
                         <div className="text-center">
                             <h1 className="text-xl font-bold uppercase tracking-wider print:text-lg">Sultan General Store</h1>

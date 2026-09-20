@@ -2,6 +2,7 @@
 
 namespace Tests\Feature;
 
+use App\Models\Order;
 use App\Models\Product;
 use App\Models\ProductUnit;
 use App\Models\User;
@@ -14,7 +15,7 @@ class PosFlowTest extends TestCase
 
     public function test_sale_checkout_creates_order_and_reduces_stock(): void
     {
-        $user = User::factory()->create();
+        $user = User::factory()->create(['is_admin' => false]);
         $this->actingAs($user);
 
         $product = Product::create([
@@ -57,7 +58,7 @@ class PosFlowTest extends TestCase
 
     public function test_purchase_updates_stock_and_cost_price(): void
     {
-        $user = User::factory()->create();
+        $user = User::factory()->create(['is_admin' => true]);
         $this->actingAs($user);
 
         $product = Product::create([
@@ -72,6 +73,7 @@ class PosFlowTest extends TestCase
             'product_id' => $product->id,
             'quantity' => 3,
             'cost_price' => 45,
+            'retail_price' => 70,
         ]);
 
         $response->assertRedirect();
@@ -110,5 +112,44 @@ class PosFlowTest extends TestCase
         $response->assertSee('Profit');
         $response->assertSee('"productProfit"');
         $response->assertSee('"monthlySales"');
+    }
+
+    public function test_staff_cannot_manage_products_or_record_purchases(): void
+    {
+        $staff = User::factory()->create(['is_admin' => false]);
+        $product = Product::create([
+            'name' => 'Restricted Product',
+            'sku' => 'RESTRICTED-001',
+            'cost_price' => 10,
+            'retail_price' => 20,
+            'stock_quantity' => 5,
+        ]);
+
+        $this->actingAs($staff)->get('/products')->assertForbidden();
+        $this->put('/products/'.$product->id, [
+            'name' => $product->name,
+            'sku' => $product->sku,
+            'stock_quantity' => 999,
+        ])->assertForbidden();
+        $this->post('/purchase', [
+            'product_id' => $product->id,
+            'quantity' => 1,
+            'cost_price' => 10,
+            'retail_price' => 20,
+        ])->assertForbidden();
+    }
+
+    public function test_purchase_order_cannot_be_viewed_as_a_customer_invoice(): void
+    {
+        $user = User::factory()->create();
+        $purchase = Order::create([
+            'type' => 'purchase',
+            'total_amount' => 100,
+            'discount' => 0,
+            'net_amount' => 100,
+            'cashier_name' => $user->name,
+        ]);
+
+        $this->actingAs($user)->get('/invoice/'.$purchase->id)->assertNotFound();
     }
 }

@@ -14,11 +14,17 @@ class ReportController extends Controller
         $weekStart = Carbon::now()->startOfWeek();
         $dayStart = Carbon::now()->startOfDay();
 
-        $sales = Order::where('type', 'sale')
+        $periodSales = Order::where('type', 'sale')
             ->where('created_at', '>=', $monthStart)
             ->with('items.product')
             ->latest()
             ->get();
+
+        $salesHistory = Order::where('type', 'sale')
+            ->with('items.product')
+            ->latest()
+            ->paginate(25)
+            ->withQueryString();
 
         $purchases = Order::where('type', 'purchase')
             ->where('created_at', '>=', $monthStart)
@@ -56,7 +62,7 @@ class ReportController extends Controller
                 return $orders->sum('net_amount');
             });
 
-        $productProfit = $sales->flatMap->items->groupBy(function ($item) {
+        $productProfit = $periodSales->flatMap->items->groupBy(function ($item) {
             return $item->product?->name ?? 'Unknown';
         })->map(function ($items, $name) {
             // FIXED: Cast to float to handle 0.5 kg etc.
@@ -84,8 +90,8 @@ class ReportController extends Controller
             ];
         })->sortByDesc('profit')->values();
 
-        $totalSales = $sales->sum('net_amount');
-        $totalCostOfGoodsSold = $sales->flatMap->items->sum(function ($item) {
+        $totalSales = $periodSales->sum('net_amount');
+        $totalCostOfGoodsSold = $periodSales->flatMap->items->sum(function ($item) {
             $cost = $item->cost_price ?? $item->product?->cost_price ?? 0;
             return (float) $cost * (float) $item->quantity;
         });
@@ -93,12 +99,12 @@ class ReportController extends Controller
         $totalPurchases = $purchases->sum('net_amount');
 
         return Inertia::render('Reports/Index', [
-            'sales' => $sales,
+            'sales' => $salesHistory,
             'purchases' => $purchases,
             'totalProfit' => $totalProfit,
             'totalSales' => $totalSales,
             'totalPurchases' => $totalPurchases,
-            'saleCount' => $sales->count(),
+            'saleCount' => $periodSales->count(),
             'productProfit' => $productProfit,
             'monthlySales' => $monthlySales->map(function ($amount, $month) {
                 return ['month' => $month, 'amount' => (float) $amount];

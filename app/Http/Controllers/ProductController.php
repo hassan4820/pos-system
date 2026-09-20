@@ -11,6 +11,8 @@ class ProductController extends Controller
 {
     public function index()
     {
+        $this->authorizeAdmin();
+
         return Inertia::render('Products/Index', [
             'products' => Product::latest()->get(),
         ]);
@@ -18,6 +20,8 @@ class ProductController extends Controller
 
     public function store(Request $request)
     {
+        $this->authorizeAdmin();
+
         $validated = $request->validate([
             'name' => 'required|string|max:255',
             'sku' => 'required|string|unique:products,sku',
@@ -46,6 +50,8 @@ class ProductController extends Controller
 
     public function update(Request $request, Product $product)
     {
+        $this->authorizeAdmin();
+
         $validated = $request->validate([
             'name' => 'required|string|max:255',
             'sku' => 'required|string|unique:products,sku,' . $product->id, // Ignore current product ID
@@ -73,6 +79,8 @@ class ProductController extends Controller
 
     public function destroy(Product $product)
     {
+        $this->authorizeAdmin();
+
         try {
             $product->delete();
             return redirect()->route('products.index')->with('success', 'Product deleted successfully.');
@@ -80,5 +88,10 @@ class ProductController extends Controller
             // Prevent deletion if the product is tied to historical order_items
             return redirect()->route('products.index')->withErrors('Cannot delete product because it has existing sales or purchase records.');
         }
+    }
+
+    private function authorizeAdmin(): void
+    {
+        abort_unless(auth()->user()?->is_admin, 403);
     }
 }

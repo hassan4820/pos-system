@@ -20,6 +20,7 @@ export default function Index({
         }).format(amount);
 
     const safeProductProfit = Array.isArray(productProfit) ? productProfit : [];
+    const salesRows = Array.isArray(sales) ? sales : sales?.data || [];
     const safeMonthlySales = Array.isArray(monthlySales) ? monthlySales : [];
     const safeWeeklyProfit = Array.isArray(weeklyProfit) ? weeklyProfit : [];
     const safeDailyProfit = Array.isArray(dailyProfit) ? dailyProfit : [];
@@ -132,7 +133,7 @@ export default function Index({
                                     </tr>
                                 </thead>
                                 <tbody>
-                                    {sales.map((sale) => (
+                                    {salesRows.map((sale) => (
                                         <tr key={sale.id}>
                                             <td className="px-4 py-2">{new Date(sale.created_at).toLocaleDateString()}</td>
                                             <td className="px-4 py-2">
@@ -156,9 +157,25 @@ export default function Index({
                                             </td>
                                         </tr>
                                     ))}
+                                    {salesRows.length === 0 && (
+                                        <tr>
+                                            <td colSpan="5" className="px-4 py-6 text-center text-sm text-gray-500">
+                                                No sales found.
+                                            </td>
+                                        </tr>
+                                    )}
                                 </tbody>
                             </table>
                         </div>
+                        {!Array.isArray(sales) && sales?.last_page > 1 && (
+                            <div className="mt-4 flex items-center justify-between text-sm">
+                                <span className="text-gray-500">Page {sales.current_page} of {sales.last_page}</span>
+                                <div className="flex gap-2">
+                                    {sales.prev_page_url && <Link href={sales.prev_page_url} className="rounded border px-3 py-1 hover:bg-gray-50">Previous</Link>}
+                                    {sales.next_page_url && <Link href={sales.next_page_url} className="rounded border px-3 py-1 hover:bg-gray-50">Next</Link>}
+                                </div>
+                            </div>
+                        )}
                     </div>
                 </div>
             </div>

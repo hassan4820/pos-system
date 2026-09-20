@@ -36,18 +36,22 @@ export default function AuthenticatedLayout({ header, children }) {
                                 >
                                     POS
                                 </NavLink>
-                                <NavLink
-                                    href={route('products.index')}
-                                    active={route().current('products.index')}
-                                >
-                                    Products
-                                </NavLink>
-                                <NavLink
-                                    href={route('purchase.index')}
-                                    active={route().current('purchase.index')}
-                                >
-                                    Purchase
-                                </NavLink>
+                                {user.is_admin && (
+                                    <NavLink
+                                        href={route('products.index')}
+                                        active={route().current('products.index')}
+                                    >
+                                        Products
+                                    </NavLink>
+                                )}
+                                {user.is_admin && (
+                                    <NavLink
+                                        href={route('purchase.index')}
+                                        active={route().current('purchase.index')}
+                                    >
+                                        Purchase
+                                    </NavLink>
+                                )}
                                 <NavLink
                                     href={route('admin.users')}
                                     active={route().current('admin.users')}
@@ -170,18 +174,22 @@ export default function AuthenticatedLayout({ header, children }) {
                         >
                             POS
                         </ResponsiveNavLink>
-                        <ResponsiveNavLink
-                            href={route('products.index')}
-                            active={route().current('products.index')}
-                        >
-                            Products
-                        </ResponsiveNavLink>
-                        <ResponsiveNavLink
-                            href={route('purchase.index')}
-                            active={route().current('purchase.index')}
-                        >
-                            Purchase
-                        </ResponsiveNavLink>
+                        {user.is_admin && (
+                            <ResponsiveNavLink
+                                href={route('products.index')}
+                                active={route().current('products.index')}
+                            >
+                                Products
+                            </ResponsiveNavLink>
+                        )}
+                        {user.is_admin && (
+                            <ResponsiveNavLink
+                                href={route('purchase.index')}
+                                active={route().current('purchase.index')}
+                            >
+                                Purchase
+                            </ResponsiveNavLink>
+                        )}
                         <ResponsiveNavLink
                             href={route('admin.users')}
                             active={route().current('admin.users')}

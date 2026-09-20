@@ -13,6 +13,8 @@ class PurchaseController extends Controller
 {
     public function index()
     {
+        $this->authorizeAdmin();
+
         return Inertia::render('Purchase/Index', [
             'products' => Product::with('units')->get(),
         ]);
@@ -20,6 +22,8 @@ class PurchaseController extends Controller
 
     public function store(Request $request)
     {
+        $this->authorizeAdmin();
+
         $validated = $request->validate([
             'product_id' => 'required|exists:products,id',
             'quantity' => 'required|numeric|min:0.01',
@@ -74,5 +78,10 @@ class PurchaseController extends Controller
         });
 
         return redirect()->route('purchase.index')->with('success', 'Stock updated successfully. New average cost calculated.');
+    }
+
+    private function authorizeAdmin(): void
+    {
+        abort_unless(auth()->user()?->is_admin, 403);
     }
 }
