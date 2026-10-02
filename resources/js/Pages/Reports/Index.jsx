@@ -1,5 +1,5 @@
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout';
-import { Head } from '@inertiajs/react';
+import { Head, Link } from '@inertiajs/react';
 
 export default function Index({
     sales,
@@ -9,7 +9,7 @@ export default function Index({
     totalPurchases,
     saleCount,
     productProfit,
-    monthlyProfit,
+    monthlySales,
     weeklyProfit,
     dailyProfit,
 }) {
@@ -20,10 +20,11 @@ export default function Index({
         }).format(amount);
 
     const safeProductProfit = Array.isArray(productProfit) ? productProfit : [];
-    const safeMonthlyProfit = Array.isArray(monthlyProfit) ? monthlyProfit : [];
+    const salesRows = Array.isArray(sales) ? sales : sales?.data || [];
+    const safeMonthlySales = Array.isArray(monthlySales) ? monthlySales : [];
     const safeWeeklyProfit = Array.isArray(weeklyProfit) ? weeklyProfit : [];
     const safeDailyProfit = Array.isArray(dailyProfit) ? dailyProfit : [];
-    const maxBarHeight = Math.max(...[...safeMonthlyProfit, ...safeWeeklyProfit, ...safeDailyProfit].map((entry) => entry.amount || 0), 1);
+    const maxBarHeight = Math.max(...[...safeMonthlySales, ...safeWeeklyProfit, ...safeDailyProfit].map((entry) => entry.amount || 0), 1);
 
     return (
         <AuthenticatedLayout header={<h2 className="text-xl font-semibold">Reports & Profit</h2>}>
@@ -74,9 +75,9 @@ export default function Index({
                         </div>
 
                         <div className="rounded-lg bg-white p-6 shadow-sm">
-                            <h3 className="mb-4 text-lg font-semibold">Monthly Profit</h3>
+                            <h3 className="mb-4 text-lg font-semibold">Monthly Sales</h3>
                             <div className="space-y-3">
-                                {safeMonthlyProfit.map((entry) => (
+                                {safeMonthlySales.map((entry) => (
                                     <div key={entry.month} className="rounded border border-gray-200 p-3">
                                         <div className="flex items-center justify-between text-sm">
                                             <span className="font-medium">{entry.month}</span>
@@ -119,7 +120,7 @@ export default function Index({
                     </div>
 
                     <div className="rounded-lg bg-white p-6 shadow-sm">
-                        <h3 className="mb-4 text-lg font-semibold">Recent Sales</h3>
+                        <h3 className="mb-4 text-lg font-semibold">Sales History</h3>
                         <div className="overflow-x-auto">
                             <table className="min-w-full divide-y divide-gray-200">
                                 <thead>
@@ -128,10 +129,11 @@ export default function Index({
                                         <th className="px-4 py-2 text-left">Products</th>
                                         <th className="px-4 py-2 text-left">Items</th>
                                         <th className="px-4 py-2 text-left">Net Amount</th>
+                                        <th className="px-4 py-2 text-right">Invoice</th>
                                     </tr>
                                 </thead>
                                 <tbody>
-                                    {sales.map((sale) => (
+                                    {salesRows.map((sale) => (
                                         <tr key={sale.id}>
                                             <td className="px-4 py-2">{new Date(sale.created_at).toLocaleDateString()}</td>
                                             <td className="px-4 py-2">
@@ -145,11 +147,35 @@ export default function Index({
                                             </td>
                                             <td className="px-4 py-2">{sale.items.length}</td>
                                             <td className="px-4 py-2">{formatCurrency(sale.net_amount)}</td>
+                                            <td className="px-4 py-2 text-right">
+                                                <Link
+                                                    href={route('invoice.show', sale.id)}
+                                                    className="inline-flex rounded bg-blue-600 px-3 py-1.5 text-sm font-medium text-white hover:bg-blue-700"
+                                                >
+                                                    View / Print
+                                                </Link>
+                                            </td>
                                         </tr>
                                     ))}
+                                    {salesRows.length === 0 && (
+                                        <tr>
+                                            <td colSpan="5" className="px-4 py-6 text-center text-sm text-gray-500">
+                                                No sales found.
+                                            </td>
+                                        </tr>
+                                    )}
                                 </tbody>
                             </table>
                         </div>
+                        {!Array.isArray(sales) && sales?.last_page > 1 && (
+                            <div className="mt-4 flex items-center justify-between text-sm">
+                                <span className="text-gray-500">Page {sales.current_page} of {sales.last_page}</span>
+                                <div className="flex gap-2">
+                                    {sales.prev_page_url && <Link href={sales.prev_page_url} className="rounded border px-3 py-1 hover:bg-gray-50">Previous</Link>}
+                                    {sales.next_page_url && <Link href={sales.next_page_url} className="rounded border px-3 py-1 hover:bg-gray-50">Next</Link>}
+                                </div>
+                            </div>
+                        )}
                     </div>
                 </div>
             </div>

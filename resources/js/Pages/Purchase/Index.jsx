@@ -1,5 +1,6 @@
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout';
 import { Head, useForm } from '@inertiajs/react';
+import { useMemo, useState } from 'react';
 import TextInput from '@/Components/TextInput';
 import InputLabel from '@/Components/InputLabel';
 import InputError from '@/Components/InputError';
@@ -8,6 +9,7 @@ import { useToast } from '@/Components/ToastProvider';
 
 export default function Index({ products }) {
     const { addToast } = useToast();
+    const [inventorySearch, setInventorySearch] = useState('');
 
     const { data, setData, post, processing, errors, reset } = useForm({
         product_id: '',
@@ -29,6 +31,23 @@ export default function Index({ products }) {
 
     // Find the currently selected product to show hints
     const selectedProduct = products.find(p => p.id === parseInt(data.product_id));
+    const filteredProducts = useMemo(() => {
+        const query = inventorySearch.trim().toLowerCase();
+
+        if (!query) return products;
+
+        return products.filter((product) =>
+            `${product.name} ${product.sku}`.toLowerCase().includes(query),
+        );
+    }, [inventorySearch, products]);
+    const totalAssetValue = products.reduce(
+        (total, product) => total + (Number(product.stock_quantity) * Number(product.cost_price)),
+        0,
+    );
+    const selectForRestock = (product) => {
+        setData('product_id', String(product.id));
+        document.getElementById('product_id')?.focus();
+    };
 
     return (
         <AuthenticatedLayout header={<h2 className="text-xl font-semibold">Inventory Purchase</h2>}>
@@ -117,7 +136,19 @@ export default function Index({ products }) {
 
                     {/* Current Inventory Overview */}
                     <div className="md:col-span-2 rounded-lg bg-white p-6 shadow-sm">
-                        <h2 className="text-lg font-bold mb-4">Current Inventory Status</h2>
+                        <div className="mb-4 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                            <div>
+                                <h2 className="text-lg font-bold">Current Inventory Status</h2>
+                                <p className="text-sm text-gray-600">Available total asset value: <span className="font-bold text-green-700">Rs {totalAssetValue.toFixed(2)}</span></p>
+                            </div>
+                            <input
+                                type="search"
+                                value={inventorySearch}
+                                onChange={(event) => setInventorySearch(event.target.value)}
+                                placeholder="Search item or barcode/SKU"
+                                className="w-full rounded-md border-gray-300 sm:w-72"
+                            />
+                        </div>
                         <div className="overflow-x-auto">
                             <table className="w-full text-left text-sm text-gray-600">
                                 <thead className="bg-gray-100 text-gray-800">
@@ -126,20 +157,38 @@ export default function Index({ products }) {
                                         <th className="p-3">Available Stock</th>
                                         <th className="p-3">Moving Avg Cost</th>
                                         <th className="p-3 text-right">Total Asset Value</th>
+                                        <th className="p-3 text-right">Action</th>
                                     </tr>
                                 </thead>
                                 <tbody>
-                                    {products.map((product) => {
+                                    {filteredProducts.map((product) => {
                                         const assetValue = (parseFloat(product.stock_quantity) * parseFloat(product.cost_price)).toFixed(2);
+                                        const outOfStock = Number(product.stock_quantity) <= 0;
                                         return (
-                                            <tr key={product.id} className="border-b">
+                                            <tr key={product.id} className={`border-b ${outOfStock ? 'bg-red-50' : ''}`}>
                                                 <td className="p-3 font-semibold text-gray-800">{product.name}</td>
-                                                <td className="p-3">{product.stock_quantity} {product.custom_unit || product.unit}</td>
+                                                <td className={`p-3 ${outOfStock ? 'font-bold text-red-700' : ''}`}>
+                                                    {outOfStock ? 'Out of stock' : `${product.stock_quantity} ${product.custom_unit || product.unit}`}
+                                                </td>
                                                 <td className="p-3 text-green-700">Rs {product.cost_price}</td>
                                                 <td className="p-3 text-right font-bold">Rs {assetValue}</td>
+                                                <td className="p-3 text-right">
+                                                    {outOfStock && (
+                                                        <button
+                                                            type="button"
+                                                            onClick={() => selectForRestock(product)}
+                                                            className="rounded bg-blue-600 px-3 py-1 text-xs font-semibold text-white hover:bg-blue-700"
+                                                        >
+                                                            Restock
+                                                        </button>
+                                                    )}
+                                                </td>
                                             </tr>
                                         );
                                     })}
+                                    {filteredProducts.length === 0 && (
+                                        <tr><td colSpan="5" className="p-6 text-center text-gray-500">No matching inventory item found.</td></tr>
+                                    )}
                                 </tbody>
                             </table>
                         </div>
