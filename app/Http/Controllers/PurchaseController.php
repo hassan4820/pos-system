@@ -7,6 +7,7 @@ use App\Models\OrderItem;
 use App\Models\Product;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Validation\ValidationException;
 use Inertia\Inertia;
 
 class PurchaseController extends Controller
@@ -25,15 +26,15 @@ class PurchaseController extends Controller
         $this->authorizeAdmin();
 
         $validated = $request->validate([
-            'product_id' => 'required|exists:products,id',
-            'quantity' => 'required|numeric|min:0.01',
-            'cost_price' => 'required|numeric',
-            'retail_price' => 'required|numeric|min:0',
+            'product_id' => 'required|integer|exists:products,id',
+            'quantity' => 'required|numeric|decimal:0,3|min:0.001|max:999999999999.999',
+            'cost_price' => 'required|numeric|decimal:0,2|min:0|max:99999999.99',
+            'retail_price' => 'required|numeric|decimal:0,2|min:0|max:99999999.99',
         ]);
 
-        $newQuantity = (float) $validated['quantity'];
-        $newCostPrice = (float) $validated['cost_price'];
-        $newRetailPrice = (float) $validated['retail_price'];
+        $newQuantity = round((float) $validated['quantity'], 3, PHP_ROUND_HALF_UP);
+        $newCostPrice = round((float) $validated['cost_price'], 2, PHP_ROUND_HALF_UP);
+        $newRetailPrice = round((float) $validated['retail_price'], 2, PHP_ROUND_HALF_UP);
 
         DB::transaction(function () use ($validated, $newQuantity, $newCostPrice, $newRetailPrice) {
             $product = Product::where('id', $validated['product_id'])->lockForUpdate()->firstOrFail();
@@ -47,11 +48,27 @@ class PurchaseController extends Controller
                 $totalNewValue = $newQuantity * $newCostPrice;
                 $newTotalStock = $currentStock + $newQuantity;
 
-                $averageCost = ($totalCurrentValue + $totalNewValue) / $newTotalStock;
+                $averageCost = round(($totalCurrentValue + $totalNewValue) / $newTotalStock, 2, PHP_ROUND_HALF_UP);
             } else {
                 $averageCost = $newCostPrice;
                 $newTotalStock = $currentStock + $newQuantity;
             }
+
+            $newTotalStock = round($newTotalStock, 3, PHP_ROUND_HALF_UP);
+            if ($newTotalStock > 999999999999.999) {
+                throw ValidationException::withMessages([
+                    'quantity' => 'The purchase would exceed the maximum supported stock quantity.',
+                ]);
+            }
+
+            $purchaseTotalCents = (int) round($newCostPrice * $newQuantity * 100, 0, PHP_ROUND_HALF_UP);
+            if ($purchaseTotalCents > 999999999999) {
+                throw ValidationException::withMessages([
+                    'quantity' => 'The purchase exceeds the maximum supported amount.',
+                ]);
+            }
+
+            $purchaseTotal = $purchaseTotalCents / 100;
 
             $product->update([
                 'stock_quantity' => $newTotalStock,
@@ -61,9 +78,9 @@ class PurchaseController extends Controller
 
             $order = Order::create([
                 'type' => 'purchase',
-                'total_amount' => number_format($newCostPrice * $newQuantity, 2, '.', ''),
+                'total_amount' => number_format($purchaseTotal, 2, '.', ''),
                 'discount' => 0,
-                'net_amount' => number_format($newCostPrice * $newQuantity, 2, '.', ''),
+                'net_amount' => number_format($purchaseTotal, 2, '.', ''),
                 'cashier_name' => auth()->user()?->name ?? 'System',
             ]);
 
@@ -73,7 +90,7 @@ class PurchaseController extends Controller
                 'quantity' => $newQuantity,
                 'price' => $newCostPrice, // Record the actual purchase price in history, not the average
                 'cost_price' => $newCostPrice, // Same value on the purchase side — no separate concept here
-                'subtotal' => number_format($newCostPrice * $newQuantity, 2, '.', ''),
+                'subtotal' => number_format($purchaseTotal, 2, '.', ''),
             ]);
         });
 

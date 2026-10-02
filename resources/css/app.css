@@ -16,10 +16,14 @@ body {
 }
 
 * {
-    transition-duration: 120ms;
-    transition-timing-function: ease-out;
+    box-sizing: border-box;
 }
 
-button, input, select, textarea {
-    will-change: transform;
+::selection {
+    background: rgb(16 185 129 / 18%);
+}
+
+:focus-visible {
+    outline: 2px solid rgb(16 185 129 / 75%);
+    outline-offset: 2px;
 }

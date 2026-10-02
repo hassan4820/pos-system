@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Models\User;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Hash;
+use Illuminate\Validation\Rules\Password;
 use Inertia\Inertia;
 
 class AdminUserController extends Controller
@@ -14,7 +15,7 @@ class AdminUserController extends Controller
         $this->authorizeAdmin();
 
         return Inertia::render('Admin/Users', [
-            'users' => User::latest()->get(),
+            'users' => User::where('is_admin', false)->latest()->get(),
         ]);
     }
 
@@ -25,20 +26,15 @@ class AdminUserController extends Controller
         $validated = $request->validate([
             'name' => 'required|string|max:255',
             'email' => 'required|email|unique:users,email',
-            'password' => 'required|min:6|confirmed',
-            'is_admin' => 'nullable|boolean',
-            'role' => 'nullable|integer|min:1|max:2',
+            'password' => ['required', 'confirmed', Password::defaults()],
         ]);
-
-        $isAdmin = (bool) ($validated['is_admin'] ?? false);
-        $role = $isAdmin ? 1 : ((int) ($validated['role'] ?? 2));
 
         User::create([
             'name' => $validated['name'],
             'email' => $validated['email'],
             'password' => Hash::make($validated['password']),
-            'is_admin' => $isAdmin,
-            'role' => $role,
+            'is_admin' => false,
+            'role' => 2,
         ]);
 
         return redirect()->route('admin.users')->with('success', 'User created successfully.');

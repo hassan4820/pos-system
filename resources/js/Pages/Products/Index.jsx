@@ -52,14 +52,14 @@ export default function Index({ products }) {
         e.preventDefault();
 
         if (editingProduct) {
-            put(`/products/${editingProduct.id}`, {
+            put(route('products.update', editingProduct.id), {
                 onSuccess: () => {
                     closeModal();
                     addToast('Product updated successfully.', 'success');
                 },
             });
         } else {
-            post('/products', {
+            post(route('products.store'), {
                 onSuccess: () => {
                     closeModal();
                     addToast('Product created successfully.', 'success');
@@ -70,7 +70,7 @@ export default function Index({ products }) {
 
     const handleDelete = (id) => {
         if (confirm('Are you sure you want to delete this product?')) {
-            destroy(`/products/${id}`, {
+            destroy(route('products.destroy', id), {
                 onSuccess: () => addToast('Product deleted successfully.', 'success'),
                 onError: () => addToast('Cannot delete product. It has existing sales/purchases.', 'error'),
             });
@@ -158,7 +158,7 @@ export default function Index({ products }) {
                                 <TextInput
                                     id="stock_quantity"
                                     type="number"
-                                    step="0.01"
+                                    step="0.001"
                                     className="mt-1 block w-full"
                                     value={data.stock_quantity}
                                     onChange={(e) => setData('stock_quantity', e.target.value)}
@@ -198,7 +198,7 @@ export default function Index({ products }) {
                     </div>
 
                     <div className="mt-6 flex justify-end gap-3">
-                        <SecondaryButton onClick={closeModal}>Cancel</SecondaryButton>
+                        <SecondaryButton type="button" onClick={closeModal}>Cancel</SecondaryButton>
                         <PrimaryButton disabled={processing}>
                             {editingProduct ? 'Save Changes' : 'Create Product'}
                         </PrimaryButton>

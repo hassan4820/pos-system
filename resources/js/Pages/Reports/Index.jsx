@@ -24,7 +24,7 @@ export default function Index({
     const safeMonthlySales = Array.isArray(monthlySales) ? monthlySales : [];
     const safeWeeklyProfit = Array.isArray(weeklyProfit) ? weeklyProfit : [];
     const safeDailyProfit = Array.isArray(dailyProfit) ? dailyProfit : [];
-    const maxBarHeight = Math.max(...[...safeMonthlySales, ...safeWeeklyProfit, ...safeDailyProfit].map((entry) => entry.amount || 0), 1);
+    const maxProductProfitMagnitude = Math.max(...safeProductProfit.map((item) => Math.abs(Number(item.profit) || 0)), 1);
 
     return (
         <AuthenticatedLayout header={<h2 className="text-xl font-semibold">Reports & Profit</h2>}>
@@ -55,15 +55,15 @@ export default function Index({
                             <h3 className="mb-4 text-lg font-semibold">Product Profit</h3>
                             <div className="space-y-3">
                                 {safeProductProfit.map((item) => (
-                                    <div key={item.name}>
+                                    <div key={item.product_id}>
                                         <div className="mb-1 flex justify-between text-sm">
                                             <span>{item.name}</span>
                                             <span className="font-semibold">{formatCurrency(item.profit)}</span>
                                         </div>
                                         <div className="h-2 rounded bg-gray-200">
                                             <div
-                                                className="h-2 rounded bg-green-600"
-                                                style={{ width: `${Math.min(100, (item.profit / Math.max(...safeProductProfit.map((p) => p.profit), 1)) * 100)}%` }}
+                                                className={`h-2 rounded ${item.profit < 0 ? 'bg-rose-500' : 'bg-emerald-500'}`}
+                                                style={{ width: `${Math.min(100, (Math.abs(Number(item.profit) || 0) / maxProductProfitMagnitude) * 100)}%` }}
                                             />
                                         </div>
                                         <div className="mt-1 text-xs text-gray-500">

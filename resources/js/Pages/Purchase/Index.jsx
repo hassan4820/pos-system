@@ -21,7 +21,7 @@ export default function Index({ products }) {
     const handleSubmit = (e) => {
         e.preventDefault();
 
-        post('/purchase', {
+        post(route('purchase.store'), {
             onSuccess: () => {
                 reset();
                 addToast('Stock purchased successfully! Average cost updated.', 'success');
@@ -91,7 +91,7 @@ export default function Index({ products }) {
                                 <TextInput
                                     id="quantity"
                                     type="number"
-                                    step="0.01"
+                                    step="0.001"
                                     className="mt-1 block w-full"
                                     value={data.quantity}
                                     onChange={(e) => setData('quantity', e.target.value)}

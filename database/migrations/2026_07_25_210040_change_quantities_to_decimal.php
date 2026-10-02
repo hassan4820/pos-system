@@ -30,5 +30,9 @@ return new class extends Migration {
         Schema::table('order_items', function (Blueprint $table) {
             $table->integer('quantity')->change();
         });
+
+        Schema::table('order_items', function (Blueprint $table) {
+            $table->dropConstrainedForeignId('unit_id');
+        });
     }
 };

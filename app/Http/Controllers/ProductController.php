@@ -26,10 +26,10 @@ class ProductController extends Controller
             'name' => 'required|string|max:255',
             'sku' => 'required|string|unique:products,sku',
             'unit' => 'nullable|string|max:50',
-            'custom_unit' => 'nullable|string|max:50',
+            'custom_unit' => 'required_if:unit,custom|nullable|string|max:50',
         ]);
 
-        $customUnit = $validated['custom_unit'] ?? null;
+        $customUnit = ($validated['unit'] ?? null) === 'custom' ? ($validated['custom_unit'] ?? null) : null;
         $unit = $customUnit ?: ($validated['unit'] ?? null);
 
         // cost_price, retail_price, and stock_quantity are never set manually here —
@@ -55,12 +55,12 @@ class ProductController extends Controller
         $validated = $request->validate([
             'name' => 'required|string|max:255',
             'sku' => 'required|string|unique:products,sku,' . $product->id, // Ignore current product ID
-            'stock_quantity' => 'required|numeric|min:0',
+            'stock_quantity' => 'required|numeric|decimal:0,3|min:0|max:999999999999.999',
             'unit' => 'nullable|string|max:50',
-            'custom_unit' => 'nullable|string|max:50',
+            'custom_unit' => 'required_if:unit,custom|nullable|string|max:50',
         ]);
 
-        $customUnit = $validated['custom_unit'] ?? null;
+        $customUnit = ($validated['unit'] ?? null) === 'custom' ? ($validated['custom_unit'] ?? null) : null;
         $unit = $customUnit ?: ($validated['unit'] ?? null);
 
         // cost_price and retail_price are intentionally excluded here.
