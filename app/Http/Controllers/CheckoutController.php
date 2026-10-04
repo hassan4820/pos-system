@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Models\Order;
 use App\Models\OrderItem;
 use App\Models\Product;
+use App\Models\CashTransaction;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\ValidationException;
@@ -21,6 +22,7 @@ class CheckoutController extends Controller
             'items.*.price' => 'required|numeric|decimal:0,2|min:0|max:9999999999.99',
             'items.*.unit_id' => 'nullable|integer|exists:product_units,id',
             'discount' => 'nullable|numeric|decimal:0,2|min:0|max:99999999.99',
+            'amount_received' => 'nullable|numeric|decimal:0,2|min:0|max:9999999999.99',
         ]);
 
         $discount = round((float) ($validated['discount'] ?? 0), 2, PHP_ROUND_HALF_UP);
@@ -127,6 +129,13 @@ class CheckoutController extends Controller
                 }
 
                 $netAmountCents = $totalAmountCents - $discountCents;
+                $receivedCents = array_key_exists('amount_received', $validated) && $validated['amount_received'] !== null
+                    ? (int) round((float) $validated['amount_received'] * 100, 0, PHP_ROUND_HALF_UP)
+                    : $netAmountCents;
+                if ($receivedCents < $netAmountCents) {
+                    throw ValidationException::withMessages(['amount_received' => 'Received amount must cover the total due.']);
+                }
+                $changeCents = $receivedCents - $netAmountCents;
 
                 $order = Order::create([
                     'type' => 'sale',
@@ -134,7 +143,12 @@ class CheckoutController extends Controller
                     'discount' => number_format($discountCents / 100, 2, '.', ''),
                     'net_amount' => number_format($netAmountCents / 100, 2, '.', ''),
                     'cashier_name' => $cashierName,
+                    'amount_received' => number_format($receivedCents / 100, 2, '.', ''),
+                    'change_given' => number_format($changeCents / 100, 2, '.', ''),
                 ]);
+
+                CashTransaction::create(['direction' => 'in', 'amount' => number_format($receivedCents / 100, 2, '.', ''), 'comment' => 'Sale payment', 'order_id' => $order->id, 'user_id' => auth()->id()]);
+                if ($changeCents > 0) CashTransaction::create(['direction' => 'out', 'amount' => number_format($changeCents / 100, 2, '.', ''), 'comment' => 'Change returned to customer', 'order_id' => $order->id, 'user_id' => auth()->id()]);
 
                 foreach ($lines as $line) {
                     OrderItem::create([

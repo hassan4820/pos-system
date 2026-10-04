@@ -1,9 +1,8 @@
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout';
-import { Head, Link } from '@inertiajs/react';
+import { Head, useForm } from '@inertiajs/react';
+import { wholeStepBase } from '@/utils/numberStep';
 
 export default function Index({
-    sales,
-    purchases,
     totalProfit,
     totalSales,
     totalPurchases,
@@ -12,7 +11,11 @@ export default function Index({
     monthlySales,
     weeklyProfit,
     dailyProfit,
+    cashSummary = { cashIn: 0, cashOut: 0, net: 0 },
+    cashTransactions = [],
 }) {
+    const cashForm = useForm({ direction: 'in', amount: '', comment: '' });
+    const saveCashEntry = (event) => { event.preventDefault(); cashForm.post(route('reports.cash.store'), { onSuccess: () => cashForm.reset('amount', 'comment') }); };
     const formatCurrency = (amount) =>
         new Intl.NumberFormat('en-PK', {
             style: 'currency',
@@ -20,7 +23,6 @@ export default function Index({
         }).format(amount);
 
     const safeProductProfit = Array.isArray(productProfit) ? productProfit : [];
-    const salesRows = Array.isArray(sales) ? sales : sales?.data || [];
     const safeMonthlySales = Array.isArray(monthlySales) ? monthlySales : [];
     const safeWeeklyProfit = Array.isArray(weeklyProfit) ? weeklyProfit : [];
     const safeDailyProfit = Array.isArray(dailyProfit) ? dailyProfit : [];
@@ -48,6 +50,24 @@ export default function Index({
                             <p className="text-sm text-gray-500">Sales Count</p>
                             <p className="text-2xl font-semibold">{saleCount}</p>
                         </div>
+                    </div>
+
+                    <div className="grid gap-4 md:grid-cols-3">
+                        {[["Today's cash in", cashSummary.cashIn, 'text-emerald-700'], ["Today's cash out", cashSummary.cashOut, 'text-rose-700'], ["Net cash movement", cashSummary.net, Number(cashSummary.net) >= 0 ? 'text-emerald-700' : 'text-rose-700']].map(([label, amount, color]) => <div key={label} className="rounded-lg bg-white p-4 shadow-sm"><p className="text-sm text-gray-500">{label}</p><p className={`text-2xl font-semibold ${color}`}>{formatCurrency(amount)}</p></div>)}
+                    </div>
+
+                    <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_minmax(0,1.5fr)]">
+                        <form onSubmit={saveCashEntry} className="space-y-3 rounded-lg bg-white p-6 shadow-sm">
+                            <h3 className="text-lg font-semibold">Record cash movement</h3>
+                            <div className="grid grid-cols-2 gap-3">
+                                <label className="text-sm text-gray-600">Type<select value={cashForm.data.direction} onChange={e => cashForm.setData('direction', e.target.value)} className="mt-1 w-full rounded-md border-gray-300"><option value="in">Cash in</option><option value="out">Cash out</option></select></label>
+                                <label className="text-sm text-gray-600">Amount<input required min={wholeStepBase(cashForm.data.amount, 2)} step="1" type="number" value={cashForm.data.amount} onChange={e => cashForm.setData('amount', e.target.value)} className="mt-1 w-full rounded-md border-gray-300" /></label>
+                            </div>
+                            <label className="block text-sm text-gray-600">Comment (required)<input required maxLength="255" value={cashForm.data.comment} onChange={e => cashForm.setData('comment', e.target.value)} className="mt-1 w-full rounded-md border-gray-300" /></label>
+                            {cashForm.errors.comment && <p className="text-sm text-rose-600">{cashForm.errors.comment}</p>}
+                            <button disabled={cashForm.processing} className="rounded-md bg-slate-900 px-4 py-2 text-sm font-semibold text-white">Save cash entry</button>
+                        </form>
+                        <div className="overflow-hidden rounded-lg bg-white p-6 shadow-sm"><h3 className="mb-3 text-lg font-semibold">Recent cash movements</h3><div className="max-h-64 space-y-2 overflow-y-auto">{cashTransactions.map(row => <div key={row.id} className="flex items-center justify-between gap-3 border-b pb-2 text-sm"><div><span className="font-medium">{row.comment}</span><span className="ml-2 text-xs text-gray-400">{row.user?.name || 'System'} · {new Date(row.created_at).toLocaleString()}</span></div><span className={row.direction === 'in' ? 'font-semibold text-emerald-700' : 'font-semibold text-rose-700'}>{row.direction === 'in' ? '+' : '−'}{formatCurrency(row.amount)}</span></div>)}{cashTransactions.length === 0 && <p className="text-sm text-gray-500">No cash movements yet.</p>}</div></div>
                     </div>
 
                     <div className="grid gap-6 lg:grid-cols-2">
@@ -119,64 +139,6 @@ export default function Index({
                         </div>
                     </div>
 
-                    <div className="rounded-lg bg-white p-6 shadow-sm">
-                        <h3 className="mb-4 text-lg font-semibold">Sales History</h3>
-                        <div className="overflow-x-auto">
-                            <table className="min-w-full divide-y divide-gray-200">
-                                <thead>
-                                    <tr>
-                                        <th className="px-4 py-2 text-left">Date</th>
-                                        <th className="px-4 py-2 text-left">Products</th>
-                                        <th className="px-4 py-2 text-left">Items</th>
-                                        <th className="px-4 py-2 text-left">Net Amount</th>
-                                        <th className="px-4 py-2 text-right">Invoice</th>
-                                    </tr>
-                                </thead>
-                                <tbody>
-                                    {salesRows.map((sale) => (
-                                        <tr key={sale.id}>
-                                            <td className="px-4 py-2">{new Date(sale.created_at).toLocaleDateString()}</td>
-                                            <td className="px-4 py-2">
-                                                <div className="space-y-1">
-                                                    {sale.items.map((item) => (
-                                                        <div key={item.id} className="text-sm">
-                                                            {item.product?.name || 'Unknown'} ({item.quantity || 0})
-                                                        </div>
-                                                    ))}
-                                                </div>
-                                            </td>
-                                            <td className="px-4 py-2">{sale.items.length}</td>
-                                            <td className="px-4 py-2">{formatCurrency(sale.net_amount)}</td>
-                                            <td className="px-4 py-2 text-right">
-                                                <Link
-                                                    href={route('invoice.show', sale.id)}
-                                                    className="inline-flex rounded bg-blue-600 px-3 py-1.5 text-sm font-medium text-white hover:bg-blue-700"
-                                                >
-                                                    View / Print
-                                                </Link>
-                                            </td>
-                                        </tr>
-                                    ))}
-                                    {salesRows.length === 0 && (
-                                        <tr>
-                                            <td colSpan="5" className="px-4 py-6 text-center text-sm text-gray-500">
-                                                No sales found.
-                                            </td>
-                                        </tr>
-                                    )}
-                                </tbody>
-                            </table>
-                        </div>
-                        {!Array.isArray(sales) && sales?.last_page > 1 && (
-                            <div className="mt-4 flex items-center justify-between text-sm">
-                                <span className="text-gray-500">Page {sales.current_page} of {sales.last_page}</span>
-                                <div className="flex gap-2">
-                                    {sales.prev_page_url && <Link href={sales.prev_page_url} className="rounded border px-3 py-1 hover:bg-gray-50">Previous</Link>}
-                                    {sales.next_page_url && <Link href={sales.next_page_url} className="rounded border px-3 py-1 hover:bg-gray-50">Next</Link>}
-                                </div>
-                            </div>
-                        )}
-                    </div>
                 </div>
             </div>
         </AuthenticatedLayout>

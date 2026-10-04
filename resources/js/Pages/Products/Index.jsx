@@ -6,6 +6,7 @@ import TextInput from '@/Components/TextInput';
 import InputLabel from '@/Components/InputLabel';
 import InputError from '@/Components/InputError';
 import PrimaryButton from '@/Components/PrimaryButton';
+import { wholeStepBase } from '@/utils/numberStep';
 import SecondaryButton from '@/Components/SecondaryButton';
 import DangerButton from '@/Components/DangerButton';
 import { useToast } from '@/Components/ToastProvider';
@@ -158,7 +159,8 @@ export default function Index({ products }) {
                                 <TextInput
                                     id="stock_quantity"
                                     type="number"
-                                    step="0.001"
+                                    step="1"
+                                    min={wholeStepBase(data.stock_quantity)}
                                     className="mt-1 block w-full"
                                     value={data.stock_quantity}
                                     onChange={(e) => setData('stock_quantity', e.target.value)}

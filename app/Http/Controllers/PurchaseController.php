@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Models\Order;
 use App\Models\OrderItem;
 use App\Models\Product;
+use App\Models\CashTransaction;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\ValidationException;
@@ -30,6 +31,7 @@ class PurchaseController extends Controller
             'quantity' => 'required|numeric|decimal:0,3|min:0.001|max:999999999999.999',
             'cost_price' => 'required|numeric|decimal:0,2|min:0|max:99999999.99',
             'retail_price' => 'required|numeric|decimal:0,2|min:0|max:99999999.99',
+            'cash_confirmed' => 'accepted',
         ]);
 
         $newQuantity = round((float) $validated['quantity'], 3, PHP_ROUND_HALF_UP);
@@ -82,7 +84,10 @@ class PurchaseController extends Controller
                 'discount' => 0,
                 'net_amount' => number_format($purchaseTotal, 2, '.', ''),
                 'cashier_name' => auth()->user()?->name ?? 'System',
+                'amount_received' => 0,
+                'change_given' => 0,
             ]);
+            CashTransaction::create(['direction' => 'out', 'amount' => number_format($purchaseTotal, 2, '.', ''), 'comment' => 'Stock purchase', 'order_id' => $order->id, 'user_id' => auth()->id()]);
 
             OrderItem::create([
                 'order_id' => $order->id,

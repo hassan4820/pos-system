@@ -3,11 +3,14 @@ import { useToast } from '@/Components/ToastProvider';
 import { Head, router } from '@inertiajs/react';
 import { useEffect, useState, useMemo } from 'react';
 import AddToCartForm from '../../Components/AddToCartForm';
+import { wholeStepBase } from '@/utils/numberStep';
 
 export default function Index({ products }) {
     const { addToast } = useToast();
     const [cart, setCart] = useState([]);
     const [discount, setDiscount] = useState(0);
+    const [amountReceived, setAmountReceived] = useState('');
+    const [checkoutOpen, setCheckoutOpen] = useState(false);
     const [searchTerm, setSearchTerm] = useState('');
     const [barcode, setBarcode] = useState('');
     const [debouncedSearchTerm, setDebouncedSearchTerm] = useState(''); // New state
@@ -146,6 +149,7 @@ export default function Index({ products }) {
     const discountCents = Math.min(subtotalCents, maxDiscountCents, Math.max(0, Math.round((Number(discount) + Number.EPSILON) * 100)));
     const appliedDiscount = discountCents / 100;
     const totalAmount = (subtotalCents - discountCents) / 100;
+    const changeDue = Math.max(0, Math.round((Number(amountReceived || 0) - totalAmount) * 100) / 100);
 
     useEffect(() => {
         setDiscount((currentDiscount) => Math.min(
@@ -160,6 +164,10 @@ export default function Index({ products }) {
             return;
         }
 
+        if (Number(amountReceived) < totalAmount) {
+            addToast('Received amount must cover the total due.', 'error');
+            return;
+        }
         router.post(
             route('checkout.store'),
             {
@@ -170,11 +178,14 @@ export default function Index({ products }) {
                     unit_id,
                 })),
                 discount: appliedDiscount,
+                amount_received: amountReceived,
             },
             {
                 onSuccess: () => {
                     setCart([]);
                     setDiscount(0);
+                    setAmountReceived('');
+                    setCheckoutOpen(false);
                     router.reload({ only: ['products'] });
                     addToast('Sale completed successfully!', 'success');
                 },
@@ -313,14 +324,14 @@ export default function Index({ products }) {
                                         <div className="mt-3 flex items-center justify-between gap-2">
                                             <div className="flex h-9 items-center rounded-lg border border-slate-200 bg-white">
                                                 <button type="button" onClick={() => updateQuantity(index, -1)} className="h-full px-2.5 text-slate-500 hover:text-slate-900" aria-label="Decrease quantity">−</button>
-                                                <input type="number" min="1" step="1" value={item.quantity} onChange={(event) => setQuantity(index, event.target.value)} className="h-full w-12 border-0 p-0 text-center text-xs font-semibold text-slate-800 focus:ring-0" aria-label={`Quantity for ${item.name}`} />
+                                                <input type="number" min={wholeStepBase(item.quantity)} step="1" value={item.quantity} onChange={(event) => setQuantity(index, event.target.value)} className="h-full w-12 border-0 p-0 text-center text-xs font-semibold text-slate-800 focus:ring-0" aria-label={`Quantity for ${item.name}`} />
                                                 <button type="button" onClick={() => updateQuantity(index, 1)} className="h-full px-2.5 text-slate-500 hover:text-slate-900" aria-label="Increase quantity">+</button>
                                             </div>
                                             <span className="text-sm font-bold text-slate-800">{formatCurrency(Math.round((Number(item.price) * Number(item.quantity) + Number.EPSILON) * 100) / 100)}</span>
                                         </div>
                                         <label className="mt-2 flex items-center justify-between gap-3 text-xs text-slate-500">
                                             <span>Unit price</span>
-                                            <span className="flex items-center gap-1">Rs <input type="number" min="0" step="1" value={item.price} onChange={(event) => setItemPrice(index, event.target.value)} className="w-20 rounded-md border-slate-200 bg-slate-50 px-2 py-1 text-right text-xs font-medium text-slate-700 focus:border-emerald-500 focus:ring-emerald-500" aria-label={`Price for ${item.name}`} /></span>
+                                            <span className="flex items-center gap-1">Rs <input type="number" min={wholeStepBase(item.price, 2)} step="1" value={item.price} onChange={(event) => setItemPrice(index, event.target.value)} className="w-20 rounded-md border-slate-200 bg-slate-50 px-2 py-1 text-right text-xs font-medium text-slate-700 focus:border-emerald-500 focus:ring-emerald-500" aria-label={`Price for ${item.name}`} /></span>
                                         </label>
                                     </div>
                                 ))}
@@ -329,7 +340,7 @@ export default function Index({ products }) {
                             <div className="border-t border-slate-100 bg-slate-50/70 p-5">
                                 <label className="mb-4 flex items-center justify-between gap-4 text-sm">
                                     <span className="font-medium text-slate-600">Discount</span>
-                                    <span className="flex items-center gap-1 rounded-lg border border-slate-200 bg-white px-2.5 text-xs text-slate-400">Rs <input type="number" min="0" max={Math.min(subtotal, 99999999.99)} step="1" value={appliedDiscount} onChange={(event) => setDiscount(Math.min(subtotal, 99999999.99, Math.max(0, Number(event.target.value))))} className="w-24 border-0 py-2 text-right text-sm font-semibold text-slate-800 focus:ring-0" aria-label="Discount amount" /></span>
+                                    <span className="flex items-center gap-1 rounded-lg border border-slate-200 bg-white px-2.5 text-xs text-slate-400">Rs <input type="number" min={wholeStepBase(appliedDiscount, 2)} max={Math.min(subtotal, 99999999.99)} step="1" value={appliedDiscount} onChange={(event) => setDiscount(Math.min(subtotal, 99999999.99, Math.max(0, Number(event.target.value))))} className="w-24 border-0 py-2 text-right text-sm font-semibold text-slate-800 focus:ring-0" aria-label="Discount amount" /></span>
                                 </label>
                                 <div className="space-y-2 border-t border-dashed border-slate-200 pt-3 text-sm">
                                     <div className="flex justify-between text-slate-500"><span>Subtotal</span><span>{formatCurrency(subtotal)}</span></div>
@@ -339,7 +350,7 @@ export default function Index({ products }) {
                                     <span className="text-sm font-semibold text-slate-700">Total due</span>
                                     <span className="text-2xl font-bold tracking-tight text-slate-900">{formatCurrency(totalAmount)}</span>
                                 </div>
-                                <button type="button" onClick={handleCheckout} disabled={cart.length === 0} className="mt-4 flex w-full items-center justify-center gap-2 rounded-xl bg-emerald-500 px-4 py-3.5 text-sm font-bold text-slate-950 shadow-sm shadow-emerald-900/10 transition hover:bg-emerald-400 disabled:cursor-not-allowed disabled:bg-slate-200 disabled:text-slate-400 disabled:shadow-none">
+                                <button type="button" onClick={() => { setAmountReceived(String(totalAmount)); setCheckoutOpen(true); }} disabled={cart.length === 0} className="mt-4 flex w-full items-center justify-center gap-2 rounded-xl bg-emerald-500 px-4 py-3.5 text-sm font-bold text-slate-950 shadow-sm shadow-emerald-900/10 transition hover:bg-emerald-400 disabled:cursor-not-allowed disabled:bg-slate-200 disabled:text-slate-400 disabled:shadow-none">
                                     Complete sale <span aria-hidden="true">→</span>
                                 </button>
                                 <p className="mt-3 text-center text-[11px] text-slate-400">Review items and discount before completing.</p>
@@ -348,6 +359,7 @@ export default function Index({ products }) {
                     </aside>
                 </div>
             </div>
+            {checkoutOpen && <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/50 p-4" role="dialog" aria-modal="true" aria-labelledby="cash-dialog-title"><div className="w-full max-w-md rounded-2xl bg-white p-6 shadow-xl"><p className="text-xs font-bold uppercase tracking-widest text-emerald-700">Cash tray</p><h2 id="cash-dialog-title" className="mt-1 text-xl font-bold">Take payment</h2><p className="mt-2 text-sm text-slate-500">Open the cash drawer, receive the customer’s cash, then confirm the amount here.</p><div className="mt-5 rounded-xl bg-slate-50 p-4"><div className="flex justify-between text-sm text-slate-500"><span>Total due</span><span className="font-semibold text-slate-900">{formatCurrency(totalAmount)}</span></div><label className="mt-4 block text-sm font-medium text-slate-700">Amount received<input autoFocus min={wholeStepBase(amountReceived, 2)} step="1" type="number" value={amountReceived} onChange={e => setAmountReceived(e.target.value)} className="mt-1 w-full rounded-lg border-slate-300" /></label><div className="mt-3 flex justify-between text-sm"><span className="text-slate-500">Change to give</span><span className="font-bold text-emerald-700">{formatCurrency(changeDue)}</span></div></div><div className="mt-5 flex justify-end gap-2"><button onClick={() => setCheckoutOpen(false)} className="rounded-lg border px-4 py-2 text-sm font-semibold">Cancel</button><button onClick={handleCheckout} className="rounded-lg bg-emerald-600 px-4 py-2 text-sm font-semibold text-white hover:bg-emerald-700">Confirm payment</button></div></div></div>}
         </AuthenticatedLayout>
     );
 }

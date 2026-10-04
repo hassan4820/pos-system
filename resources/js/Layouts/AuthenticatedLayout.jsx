@@ -8,6 +8,7 @@ const navigation = [
     { label: 'Products', route: 'products.index', icon: 'products', admin: true },
     { label: 'Purchases', route: 'purchase.index', icon: 'purchase', admin: true },
     { label: 'Reports', route: 'reports.index', icon: 'reports' },
+    { label: 'History', route: 'history.index', icon: 'reports' },
     { label: 'Team members', route: 'admin.users', icon: 'users', admin: true },
 ];
 
