@@ -181,10 +181,19 @@ export default function Index({ products }) {
                                 value={data.unit}
                                 onChange={(e) => setData('unit', e.target.value)}
                             >
+                                <option value="">Select a unit</option>
                                 <option value="kg">Kilogram (kg)</option>
                                 <option value="g">Gram (g)</option>
                                 <option value="ltr">Liter (ltr)</option>
                                 <option value="pcs">Pieces (pcs)</option>
+                                <option value="Small">Small</option>
+                                <option value="Medium">Medium</option>
+                                <option value="Large">Large</option>
+                                <option value="XL">XL</option>
+                                <option value="Pound">Pound</option>
+                                {data.unit && !['kg', 'g', 'ltr', 'pcs', 'Small', 'Medium', 'Large', 'XL', 'Pound', 'custom'].includes(data.unit) && (
+                                    <option value={data.unit}>{data.unit}</option>
+                                )}
                                 <option value="custom">Custom...</option>
                             </select>
                             <InputError message={errors.unit} className="mt-2" />
