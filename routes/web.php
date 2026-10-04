@@ -32,6 +32,8 @@ Route::middleware('auth')->group(function () {
 
     Route::get('/pos', [POSController::class, 'index'])->name('pos.index');
     Route::post('/checkout', [CheckoutController::class, 'store'])->name('checkout.store');
+    Route::get('/history', [ReportController::class, 'history'])->name('history.index');
+    Route::post('/history/{order}/return', [ReportController::class, 'returnSale'])->name('history.return');
     Route::get('/products', [ProductController::class, 'index'])->name('products.index');
     Route::post('/products', [ProductController::class, 'store'])->name('products.store');
 
@@ -42,6 +44,7 @@ Route::middleware('auth')->group(function () {
     Route::get('/purchase', [PurchaseController::class, 'index'])->name('purchase.index');
     Route::post('/purchase', [PurchaseController::class, 'store'])->name('purchase.store');
     Route::get('/reports', [ReportController::class, 'index'])->name('reports.index');
+    Route::post('/reports/cash', [ReportController::class, 'storeCashEntry'])->name('reports.cash.store');
     Route::get('/invoice/{order}', [InvoiceController::class, 'show'])->name('invoice.show');
     Route::get('/admin/users', [AdminUserController::class, 'index'])->name('admin.users');
     Route::post('/admin/users', [AdminUserController::class, 'store'])->name('admin.users.store');

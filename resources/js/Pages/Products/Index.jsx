@@ -6,6 +6,7 @@ import TextInput from '@/Components/TextInput';
 import InputLabel from '@/Components/InputLabel';
 import InputError from '@/Components/InputError';
 import PrimaryButton from '@/Components/PrimaryButton';
+import { wholeStepBase } from '@/utils/numberStep';
 import SecondaryButton from '@/Components/SecondaryButton';
 import DangerButton from '@/Components/DangerButton';
 import { useToast } from '@/Components/ToastProvider';
@@ -158,7 +159,8 @@ export default function Index({ products }) {
                                 <TextInput
                                     id="stock_quantity"
                                     type="number"
-                                    step="0.001"
+                                    step="1"
+                                    min={wholeStepBase(data.stock_quantity)}
                                     className="mt-1 block w-full"
                                     value={data.stock_quantity}
                                     onChange={(e) => setData('stock_quantity', e.target.value)}
@@ -179,10 +181,19 @@ export default function Index({ products }) {
                                 value={data.unit}
                                 onChange={(e) => setData('unit', e.target.value)}
                             >
+                                <option value="">Select a unit</option>
                                 <option value="kg">Kilogram (kg)</option>
                                 <option value="g">Gram (g)</option>
                                 <option value="ltr">Liter (ltr)</option>
                                 <option value="pcs">Pieces (pcs)</option>
+                                <option value="Small">Small</option>
+                                <option value="Medium">Medium</option>
+                                <option value="Large">Large</option>
+                                <option value="XL">XL</option>
+                                <option value="Pound">Pound</option>
+                                {data.unit && !['kg', 'g', 'ltr', 'pcs', 'Small', 'Medium', 'Large', 'XL', 'Pound', 'custom'].includes(data.unit) && (
+                                    <option value={data.unit}>{data.unit}</option>
+                                )}
                                 <option value="custom">Custom...</option>
                             </select>
                             <InputError message={errors.unit} className="mt-2" />

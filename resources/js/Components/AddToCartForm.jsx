@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { wholeStepBase } from '@/utils/numberStep';
 
 export default function AddToCartForm({ product, unit, onAddToCart }) {
     const [quantity, setQuantity] = useState(1);
@@ -50,13 +51,13 @@ export default function AddToCartForm({ product, unit, onAddToCart }) {
             <div className="grid grid-cols-2 gap-2">
                 <label className="block text-[10px] font-medium uppercase tracking-wide text-slate-400">
                     Quantity
-                    <input type="number" min="1" step="1" value={quantity} onChange={handleQuantityChange} className="mt-1 w-full rounded-lg border-slate-200 bg-slate-50 px-2.5 py-2 text-xs font-medium normal-case tracking-normal text-slate-800 focus:border-emerald-500 focus:bg-white focus:ring-emerald-500" />
+                    <input type="number" min={wholeStepBase(quantity)} step="1" value={quantity} onChange={handleQuantityChange} className="mt-1 w-full rounded-lg border-slate-200 bg-slate-50 px-2.5 py-2 text-xs font-medium normal-case tracking-normal text-slate-800 focus:border-emerald-500 focus:bg-white focus:ring-emerald-500" />
                 </label>
                 <label className="block text-[10px] font-medium uppercase tracking-wide text-slate-400">
                     Line price
                     <div className="mt-1 flex items-center rounded-lg border border-slate-200 bg-slate-50 focus-within:border-emerald-500 focus-within:bg-white focus-within:ring-1 focus-within:ring-emerald-500">
                         <span className="pl-2.5 text-[10px] normal-case tracking-normal text-slate-400">Rs</span>
-                        <input type="number" min="0" step="1" value={calculatedPrice} onChange={handlePriceChange} className="w-full border-0 bg-transparent px-2 py-2 text-xs font-medium normal-case tracking-normal text-slate-800 focus:ring-0" />
+                        <input type="number" min={wholeStepBase(calculatedPrice, 2)} step="1" value={calculatedPrice} onChange={handlePriceChange} className="w-full border-0 bg-transparent px-2 py-2 text-xs font-medium normal-case tracking-normal text-slate-800 focus:ring-0" />
                     </div>
                 </label>
             </div>

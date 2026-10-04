@@ -6,6 +6,7 @@ import InputLabel from '@/Components/InputLabel';
 import InputError from '@/Components/InputError';
 import PrimaryButton from '@/Components/PrimaryButton';
 import { useToast } from '@/Components/ToastProvider';
+import { wholeStepBase } from '@/utils/numberStep';
 
 export default function Index({ products }) {
     const { addToast } = useToast();
@@ -16,11 +17,13 @@ export default function Index({ products }) {
         quantity: '',
         cost_price: '',
         retail_price: '',
+        cash_confirmed: false,
     });
 
     const handleSubmit = (e) => {
         e.preventDefault();
 
+        if (!data.cash_confirmed) return;
         post(route('purchase.store'), {
             onSuccess: () => {
                 reset();
@@ -91,7 +94,8 @@ export default function Index({ products }) {
                                 <TextInput
                                     id="quantity"
                                     type="number"
-                                    step="0.001"
+                                    step="1"
+                                    min={wholeStepBase(data.quantity)}
                                     className="mt-1 block w-full"
                                     value={data.quantity}
                                     onChange={(e) => setData('quantity', e.target.value)}
@@ -105,7 +109,8 @@ export default function Index({ products }) {
                                 <TextInput
                                     id="cost_price"
                                     type="number"
-                                    step="0.01"
+                                    step="1"
+                                    min={wholeStepBase(data.cost_price, 2)}
                                     className="mt-1 block w-full"
                                     value={data.cost_price}
                                     onChange={(e) => setData('cost_price', e.target.value)}
@@ -119,7 +124,8 @@ export default function Index({ products }) {
                                 <TextInput
                                     id="retail_price"
                                     type="number"
-                                    step="0.01"
+                                    step="1"
+                                    min={wholeStepBase(data.retail_price, 2)}
                                     className="mt-1 block w-full"
                                     value={data.retail_price}
                                     onChange={(e) => setData('retail_price', e.target.value)}
@@ -128,7 +134,9 @@ export default function Index({ products }) {
                                 <InputError message={errors.retail_price} className="mt-2" />
                             </div>
 
-                            <PrimaryButton className="w-full justify-center" disabled={processing}>
+                            <label className="flex items-start gap-2 rounded-lg border border-amber-200 bg-amber-50 p-3 text-sm text-amber-900"><input type="checkbox" checked={data.cash_confirmed} onChange={e => setData('cash_confirmed', e.target.checked)} required className="mt-0.5 rounded border-amber-400 text-amber-600" /><span><strong>Cash tray opened</strong><br />Confirm cash is ready before recording this purchase payment.</span></label>
+
+                            <PrimaryButton className="w-full justify-center" disabled={processing || !data.cash_confirmed}>
                                 Complete Purchase
                             </PrimaryButton>
                         </form>
